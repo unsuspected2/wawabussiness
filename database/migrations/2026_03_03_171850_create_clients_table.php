@@ -19,6 +19,7 @@ return new class extends Migration
             $table->date('due_date');
             $table->enum('status', ['Ativo', 'Vencido', 'Cancelado'])->default('Ativo');
             $table->text('observations')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

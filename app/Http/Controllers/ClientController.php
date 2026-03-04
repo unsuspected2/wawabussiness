@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Carbon\Carbon;
 use App\Models\Client;
 use Illuminate\Http\Request;
 
@@ -14,24 +14,41 @@ class ClientController extends Controller
 
     public function index(Request $request)
     {
-        $query = Client::query();
+        // PASSO 1: Atualização Automática de Status
+        // Se a data passou de hoje e ainda está 'Ativo', vira 'Vencido'
+        Client::where('status', 'Ativo')
+            ->where('due_date', '<', Carbon::today())
+            ->update(['status' => 'Vencido']);
 
-        if ($request->status) {
+        // PASSO 2: Iniciar Query (Verificar se quer removidos ou normais)
+        if ($request->has('trashed')) {
+            $query = Client::onlyTrashed();
+        } else {
+            $query = Client::query();
+        }
+
+        // PASSO 3: Filtro por Status (Ativo / Vencido)
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->service) {
-            $query->where('service', $request->service);
+        // PASSO 4: Filtro de Busca (Nome ou Serviço)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('service', 'like', "%{$search}%");
+            });
         }
 
-        $clients = $query->get();
+        $clients = $query->orderBy('due_date', 'asc')->paginate(15);
 
-        return view('clients.index', compact('clients'));
+        return view('admin.clients.index', compact('clients'));
     }
 
     public function create()
     {
-        return view('clients.create');
+        return view('admin.clients.create.index');
     }
 
     public function store(Request $request)
@@ -46,7 +63,7 @@ class ClientController extends Controller
             'observations' => 'nullable|string',
         ]);
 
-        $validated['due_date'] = date('Y-m-d', strtotime($validated['start_date'] . ' + 30 days'));
+        $validated['due_date'] = date('Y-m-d', strtotime($validated['start_date'].' + 30 days'));
         $validated['status'] = 'Ativo';
 
         Client::create($validated);
@@ -59,7 +76,7 @@ class ClientController extends Controller
 
     public function edit(Client $client)
     {
-        return view('clients.edit', compact('client'));
+        return view('admin.clients.edit.index', compact('client'));
     }
 
     public function update(Request $request, Client $client)
@@ -75,10 +92,10 @@ class ClientController extends Controller
         ]);
 
         if ($request->has('renew')) {
-            $validated['due_date'] = date('Y-m-d', strtotime(now() . ' + 30 days'));
+            $validated['due_date'] = date('Y-m-d', strtotime(now().' + 30 days'));
             $validated['status'] = 'Ativo';
         } else {
-            $validated['due_date'] = date('Y-m-d', strtotime($validated['start_date'] . ' + 30 days'));
+            $validated['due_date'] = date('Y-m-d', strtotime($validated['start_date'].' + 30 days'));
         }
 
         $client->update($validated);
@@ -88,7 +105,18 @@ class ClientController extends Controller
 
     public function destroy(Client $client)
     {
+        // Validação do motivo (obrigatório)
+        $request = request(); // pega a request atual
+        $request->validate([
+            'deleted_reason' => 'required|string|max:500',
+        ]);
+
+        $client->deleted_reason = $request->deleted_reason;
+        $client->saveQuietly();
+
         $client->delete();
-        return redirect()->route('clients.index')->with('success', 'Cliente removido!');
+
+        return redirect()->route('clients.index')
+            ->with('success', 'Cliente removido com sucesso. Motivo: '.$request->deleted_reason);
     }
 }
