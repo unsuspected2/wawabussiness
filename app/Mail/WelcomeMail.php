@@ -14,6 +14,7 @@ class WelcomeMail extends Mailable
 
     public function __construct($client)
     {
+        //se a mensagem for no watshapp melhor para mim
         $this->client = $client;
     }
 
