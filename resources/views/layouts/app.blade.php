@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="pt">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,7 +15,8 @@
             --sidebar-width: 260px;
             --bg-dark: #0a0a0b;
             --bg-sidebar: #111112;
-            --accent-color: #198754; /* Verde Sucesso */
+            --accent-color: #198754;
+            /* Verde Sucesso */
         }
 
         body {
@@ -80,7 +82,8 @@
             text-align: center;
         }
 
-        #sidebar ul li a:hover, #sidebar ul li.active > a {
+        #sidebar ul li a:hover,
+        #sidebar ul li.active>a {
             color: #fff;
             background: rgba(25, 135, 84, 0.15);
             color: var(--accent-color);
@@ -100,13 +103,16 @@
             #sidebar {
                 margin-left: calc(var(--sidebar-width) * -1);
             }
+
             #sidebar.active {
                 margin-left: 0;
             }
+
             #content {
                 margin-left: 0;
                 padding: 20px;
             }
+
             #sidebarCollapse {
                 display: block !important;
             }
@@ -136,11 +142,21 @@
         }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="wrapper">
@@ -161,9 +177,14 @@
                         <i class="fas fa-user-friends"></i> Clientes
                     </a>
                 </li>
-                <li>
-                    <a href="#">
+                <li class="{{ request()->routeIs('reports.index') ? 'active' : '' }}">
+                    <a href="{{ route('reports.index') }}">
                         <i class="fas fa-file-invoice-dollar"></i> Relatórios
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('logs.index') ? 'active' : '' }}">
+                    <a href="{{ route('logs.index') }}">
+                        <i class="fas fa-history"></i> Logs de Atividades
                     </a>
                 </li>
                 <li>
@@ -204,12 +225,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        $(document).ready(function () {
+        $(document).ready(function() {
             // Toggle para o menu no mobile
-            $('#sidebarCollapse').on('click', function () {
+            $('#sidebarCollapse').on('click', function() {
                 $('#sidebar').toggleClass('active');
             });
         });
     </script>
 </body>
+
 </html>

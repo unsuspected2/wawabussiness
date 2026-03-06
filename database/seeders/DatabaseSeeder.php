@@ -28,6 +28,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(AdminSeeder::class);
         // Opcional: Seed clients de teste
-        \App\Models\Client::factory(10)->create();
+        // \App\Models\Client::factory(10)->create();
     }
 }
