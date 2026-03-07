@@ -1,8 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
-use Carbon\Carbon;
+
 use App\Models\Client;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class ClientController extends Controller
@@ -54,24 +55,53 @@ class ClientController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'whatsapp' => 'required|string|max:20',
-            'service' => 'required|string|max:50',
+            'existing_client_id' => 'nullable|exists:clients,id',
+            'name' => 'required_if:existing_client_id,null|string|max:255',
+            'whatsapp' => 'required_if:existing_client_id,null|string|max:20',
+            'service_id' => 'required|exists:services,id',
             'plan' => 'required|string|max:50',
-            'value_paid' => 'required|numeric',
-            'start_date' => 'required|date',
+            'value_paid' => 'required|numeric|min:0.01',
+            'start_date' => 'nullable|date',
             'observations' => 'nullable|string',
         ]);
 
-        $validated['due_date'] = date('Y-m-d', strtotime($validated['start_date'].' + 30 days'));
-        $validated['status'] = 'Ativo';
+        if ($request->filled('existing_client_id')) {
+            // Renovação
+            $client = Client::findOrFail($request->existing_client_id);
 
-        Client::create($validated);
+            Payment::create([
+                'client_id' => $client->id,
+                'amount' => $validated['value_paid'],
+                'payment_date' => now(),
+                'new_due_date' => now()->addDays(30),
+                'user_id' => auth()->id(),
+                'notes' => $validated['observations'] ?? 'Renovação automática',
+            ]);
 
-        // Enviar email de boas-vindas (ver pilar 4)
-        // Mail::to('exemplo@email.com')->send(new WelcomeMail($client));
+            $client->update([
+                'due_date' => now()->addDays(30),
+                'status' => 'Ativo',
+            ]);
 
-        return redirect()->route('clients.index')->with('success', 'Cliente cadastrado!');
+            return redirect()->route('clients.index')
+                ->with('success', 'Assinatura renovada com sucesso!');
+        }
+
+        // Novo cliente
+        $client = Client::create([
+            'name' => $validated['name'],
+            'whatsapp' => $validated['whatsapp'],
+            'service_id' => $validated['service_id'],
+            'plan' => $validated['plan'],
+            'value_paid' => $validated['value_paid'],
+            'start_date' => now(),
+            'due_date' => now()->addDays(30),
+            'status' => 'Ativo',
+            'observations' => $validated['observations'],
+        ]);
+
+        return redirect()->route('clients.index')
+            ->with('success', 'Cliente cadastrado com sucesso!');
     }
 
     public function edit(Client $client)
@@ -84,7 +114,7 @@ class ClientController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'whatsapp' => 'required|string|max:20',
-            'service' => 'required|string|max:50',
+            'service_id' => 'required|exists:services,id',
             'plan' => 'required|string|max:50',
             'value_paid' => 'required|numeric',
             'start_date' => 'required|date',
@@ -92,10 +122,21 @@ class ClientController extends Controller
         ]);
 
         if ($request->has('renew')) {
-            $validated['due_date'] = date('Y-m-d', strtotime(now().' + 30 days'));
+            // Renovação: cria registro de pagamento e atualiza vencimento
+            Payment::create([
+                'client_id' => $client->id,
+                'amount' => $validated['value_paid'],
+                'payment_date' => now(),
+                'new_due_date' => Carbon::today()->addDays(30),
+                'method' => $request->method ?? 'Multicaixa',
+                'notes' => $request->notes ?? 'Renovação manual',
+                'user_id' => auth()->id(),
+            ]);
+
+            $validated['due_date'] = Carbon::today()->addDays(30);
             $validated['status'] = 'Ativo';
         } else {
-            $validated['due_date'] = date('Y-m-d', strtotime($validated['start_date'].' + 30 days'));
+            $validated['due_date'] = Carbon::parse($validated['start_date'])->addDays(30);
         }
 
         $client->update($validated);

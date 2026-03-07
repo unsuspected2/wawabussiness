@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="pt">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WawaBusiness - Dashboard</title>
+    <title>WawaBusiness - @yield('title', 'Dashboard')</title>
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
 
-    <!-- Bootstrap 5 & FontAwesome -->
+    <!-- Bootstrap 5 & Font Awesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
@@ -16,7 +16,6 @@
             --bg-dark: #0a0a0b;
             --bg-sidebar: #111112;
             --accent-color: #198754;
-            /* Verde Sucesso */
         }
 
         body {
@@ -26,14 +25,12 @@
             overflow-x: hidden;
         }
 
-        /* Estrutura Principal */
         .wrapper {
             display: flex;
             width: 100%;
-            align-items: stretch;
+            min-height: 100vh;
         }
 
-        /* Menu Lateral */
         #sidebar {
             min-width: var(--sidebar-width);
             max-width: var(--sidebar-width);
@@ -44,6 +41,7 @@
             position: fixed;
             border-right: 1px solid #222;
             z-index: 1000;
+            overflow-y: auto;
         }
 
         .sidebar-header {
@@ -53,7 +51,7 @@
         }
 
         .sidebar-header h3 {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             margin: 0;
             letter-spacing: 1px;
         }
@@ -62,43 +60,46 @@
             padding: 20px 0;
         }
 
-        #sidebar ul li {
-            padding: 5px 15px;
-        }
-
         #sidebar ul li a {
-            padding: 12px 15px;
+            padding: 12px 20px;
             font-size: 1.05rem;
-            display: block;
+            display: flex;
+            align-items: center;
             color: #94a3b8;
             text-decoration: none;
             border-radius: 10px;
-            transition: 0.3s;
+            margin: 4px 15px;
+            transition: all 0.3s;
         }
 
         #sidebar ul li a i {
             margin-right: 12px;
-            width: 20px;
+            width: 24px;
             text-align: center;
         }
 
         #sidebar ul li a:hover,
-        #sidebar ul li.active>a {
+        #sidebar ul li.active a {
             color: #fff;
             background: rgba(25, 135, 84, 0.15);
             color: var(--accent-color);
         }
 
-        /* Conteúdo Principal */
         #content {
             width: 100%;
-            padding: 40px;
+            padding: 40px 30px;
             min-height: 100vh;
-            transition: all 0.3s;
             margin-left: var(--sidebar-width);
+            transition: all 0.3s;
         }
 
-        /* Estilo para Mobile */
+        .badge-vencidos {
+            background: #dc3545;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            margin-left: auto;
+        }
+
         @media (max-width: 768px) {
             #sidebar {
                 margin-left: calc(var(--sidebar-width) * -1);
@@ -110,7 +111,7 @@
 
             #content {
                 margin-left: 0;
-                padding: 20px;
+                padding: 20px 15px;
             }
 
             #sidebarCollapse {
@@ -118,7 +119,6 @@
             }
         }
 
-        /* Botão Sair no fundo */
         .logout-section {
             position: absolute;
             bottom: 20px;
@@ -131,9 +131,10 @@
             background: rgba(220, 53, 69, 0.1);
             color: #dc3545;
             border: none;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
             transition: 0.3s;
+            font-size: 1.05rem;
         }
 
         .btn-logout:hover {
@@ -141,24 +142,22 @@
             color: #fff;
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar {
-            width: 5px;
+            width: 6px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #000;
+            background: #111;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #333;
+            background: #444;
             border-radius: 10px;
         }
     </style>
 </head>
 
 <body>
-
     <div class="wrapper">
         <!-- Sidebar -->
         <nav id="sidebar">
@@ -169,24 +168,49 @@
             <ul class="list-unstyled components">
                 <li class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <a href="{{ route('dashboard') }}">
-                        <i class="fas fa-chart-pie"></i> Dashboard
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
                     </a>
                 </li>
+
                 <li class="{{ request()->routeIs('clients.*') ? 'active' : '' }}">
                     <a href="{{ route('clients.index') }}">
-                        <i class="fas fa-user-friends"></i> Clientes
+                        <i class="fas fa-users"></i> Clientes
+                        @if($vencidosCount ?? 0 > 0)
+                            <span class="badge-vencidos">{{ $vencidosCount }}</span>
+                        @endif
                     </a>
                 </li>
-                <li class="{{ request()->routeIs('reports.index') ? 'active' : '' }}">
+
+                <li class="{{ request()->routeIs('services.*') ? 'active' : '' }}">
+                    <a href="{{ route('services.index') }}">
+                        <i class="fas fa-tv"></i> Serviços
+                    </a>
+                </li>
+
+                <li class="{{ request()->routeIs('payments.index') ? 'active' : '' }}">
+                    <a href="{{ route('payments.index') }}">
+                        <i class="fas fa-hand-holding-dollar"></i> Renovações
+                    </a>
+                </li>
+
+                <li class="{{ request()->routeIs('reports.*') ? 'active' : '' }}">
                     <a href="{{ route('reports.index') }}">
-                        <i class="fas fa-file-invoice-dollar"></i> Relatórios
+                        <i class="fas fa-chart-line"></i> Relatórios
                     </a>
                 </li>
+
+                <li class="{{ request()->routeIs('withdrawals.index') ? 'active' : '' }}">
+                    <a href="{{ route('withdrawals.index') }}">
+                        <i class="fas fa-money-bill-transfer"></i> Saques / Caixa
+                    </a>
+                </li>
+
                 <li class="{{ request()->routeIs('logs.index') ? 'active' : '' }}">
                     <a href="{{ route('logs.index') }}">
                         <i class="fas fa-history"></i> Logs de Atividades
                     </a>
                 </li>
+
                 <li>
                     <a href="#">
                         <i class="fas fa-cog"></i> Configurações
@@ -204,15 +228,15 @@
             </div>
         </nav>
 
-        <!-- Page Content -->
+        <!-- Conteúdo Principal -->
         <div id="content">
-            <!-- Botão de Menu para Mobile (Oculto no Desktop) -->
+            <!-- Botão de toggle no mobile -->
             <nav class="navbar navbar-expand-lg navbar-dark bg-transparent d-md-none mb-4">
                 <div class="container-fluid">
                     <button type="button" id="sidebarCollapse" class="btn btn-success">
                         <i class="fas fa-align-left"></i>
                     </button>
-                    <span class="text-white ms-3">WawaBusiness</span>
+                    <span class="text-white ms-3 fw-bold">WawaBusiness</span>
                 </div>
             </nav>
 
@@ -225,13 +249,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        $(document).ready(function() {
-            // Toggle para o menu no mobile
-            $('#sidebarCollapse').on('click', function() {
+        $(document).ready(function () {
+            $('#sidebarCollapse').on('click', function () {
                 $('#sidebar').toggleClass('active');
             });
         });
     </script>
 </body>
-
 </html>

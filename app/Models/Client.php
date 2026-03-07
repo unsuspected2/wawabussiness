@@ -10,13 +10,22 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Client extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $fillable = [
-        'name', 'whatsapp', 'service', 'plan', 'value_paid',
-        'start_date', 'due_date', 'status', 'observations',
-        'deleted_reason'  // ← novo campo para motivo da exclusão
+        'name', 'whatsapp', 'service_id', 'plan', 'value_paid',
+        'start_date', 'due_date', 'status', 'observations', 'deleted_reason',
     ];
+
+    public function service()
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 
     protected $dates = ['deleted_at'];
 
@@ -48,7 +57,7 @@ class Client extends Model
 
         // Quando deletar (soft delete), registrar motivo e log
         static::deleting(function ($client) {
-            if (!$client->isForceDeleting()) {
+            if (! $client->isForceDeleting()) {
                 $client->deleted_reason = request()->input('deleted_reason', 'Motivo não informado');
                 $client->saveQuietly(); // salva sem disparar eventos novamente
             }

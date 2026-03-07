@@ -4,6 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use Carbon\Carbon;
+use App\Models\Service;
+use App\Models\Payment;
+use App\Models\Withdrawal;
+
+
+
+
+
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -49,6 +57,26 @@ class DashboardController extends Controller
             ->take(8)
             ->get();
 
+        $monthlyPaid = Client::whereMonth('created_at', Carbon::now()->month)->sum('value_paid');
+        $monthlyWithdrawals = Withdrawal::whereMonth('withdrawal_date', Carbon::now()->month)->sum('amount');
+        $monthlyBalance = $monthlyPaid - $monthlyWithdrawals;
+
+        // Entradas do mês
+    $monthlyPaid = Payment::whereMonth('payment_date', Carbon::now()->month)
+                          ->sum('amount');
+
+    // Saídas do mês (apenas saques NÃO repostos)
+    $monthlyWithdrawals = Withdrawal::whereMonth('withdrawal_date', Carbon::now()->month)
+                                    ->where('is_repaid', false)
+                                    ->sum('amount');
+
+    $monthlyBalance = $monthlyPaid - $monthlyWithdrawals;
+
+    // Saques pendentes de reposição (total geral)
+    $pendingRepay = Withdrawal::where('repay_status', 'Pendente')
+                              ->where('is_repaid', false)
+                              ->sum('amount');
+
         return view('admin.dashboard.index', compact(
             'totalClients',
             'activeClients',
@@ -57,7 +85,11 @@ class DashboardController extends Controller
             'totalPaid',
             'upcomingDue',
             'statusCount',
-            'recentDeletions'
+            'recentDeletions',
+            'monthlyPaid',
+            'monthlyWithdrawals',
+            'monthlyBalance',
+            'pendingRepay'
         ));
     }
 }

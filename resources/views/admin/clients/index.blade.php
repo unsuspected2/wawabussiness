@@ -117,7 +117,9 @@
     </div>
 
     <div class="mt-4 d-flex justify-content-center">
-        {{ $clients->appends(request()->query())->links() }}
+
+        {{ $clients->appends(request()->query())->links('pagination::bootstrap-5') }}
+
     </div>
 </div>
 @endsection
