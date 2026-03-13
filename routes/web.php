@@ -3,89 +3,46 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ClientController;
-use App\Http\Controllers\ServiceController;      // Novo: CRUD de Serviços
-use App\Http\Controllers\PaymentController;      // Novo: Histórico de Renovações/Pagamentos
-use App\Http\Controllers\WithdrawalController;   // Saques
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\LogController;
 use Illuminate\Http\Request;
 
+use Illuminate\Support\Facades\Artisan;
+
+
 // Rota pública inicial
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
-// Rotas de autenticação (login, register, logout, etc.)
+// Rotas de autenticação (Login, Register, etc.)
 Auth::routes();
 
-// Redireciona /home para o dashboard (padrão do Laravel Auth)
+// Redireciona /home para o dashboard
 Route::get('/home', [DashboardController::class, 'index'])->middleware('auth')->name('home');
 
-// Todas as rotas administrativas protegidas por autenticação
+// Todas as rotas administrativas protegidas
 Route::middleware(['auth'])->prefix('admin')->group(function () {
 
-    // Dashboard Principal
+    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Clientes (CRUD + Export + Busca JSON para autocomplete)
+    // Clientes (Exportação e Busca antes do Resource para evitar conflitos)
+    Route::get('/clients/export-excel', [ClientController::class, 'export'])->name('clients.export');
+    Route::get('/clients/search-json', [ClientController::class, 'searchJson'])->name('clients.search.json');
     Route::resource('clients', ClientController::class);
 
-    // Exportação de clientes para Excel (com filtros)
-    Route::get('/clients/export-excel', function (Request $request) {
-        $status = $request->query('status');
-        $service = $request->query('service');
+    // Serviços
+    Route::resource('services', ServiceController::class);
 
-        return (new \App\Exports\ClientsExport($status, $service))
-            ->download('clientes_wawabusiness_' . now()->format('d-m-Y_H-i') . '.xlsx');
-    })->name('clients.export');
-
-    // Busca JSON para autocomplete (usado no cadastro/renovação)
-    Route::get('/clients/search-json', function (Request $request) {
-        $term = $request->query('term', '');
-
-        $clients = \App\Models\Client::where('name', 'like', "%$term%")
-            ->orWhere('whatsapp', 'like', "%$term%")
-            ->select('id', 'name', 'whatsapp')
-            ->limit(10)
-            ->get()
-            ->map(fn($c) => [
-                'id' => $c->id,
-                'text' => $c->name . ' - ' . $c->whatsapp
-            ]);
-
-        return response()->json($clients);
-    })->name('clients.search.json');
-
-    // Serviços (CRUD)
-    Route::resource('services', ServiceController::class)->names([
-        'index' => 'services.index',
-        'create' => 'services.create',
-        'store' => 'services.store',
-        'show' => 'services.show',
-        'edit' => 'services.edit',
-        'update' => 'services.update',
-        'destroy' => 'services.destroy',
-    ]);
-
-    // Pagamentos / Renovações (histórico)
-    Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'edit', 'update', 'show', 'destroy'])->names([
-        'index' => 'payments.index',
-        'show' => 'payments.show',
-        'edit' => 'payments.edit',
-        'create' => 'payments.create',
-        'store' => 'payments.store',
-    ]);
+    // Pagamentos / Renovações
+    Route::resource('payments', PaymentController::class)->except(['destroy']);
 
     // Saques / Caixa
-    Route::resource('withdrawals', WithdrawalController::class)->only(['index','show','edit', 'create', 'store', 'update', 'destroy'], )->names([
-        'index' => 'withdrawals.index',
-        'show' => 'withdrawals.show',
-        'edit' => 'withdrawals.edit',
-        'create' => 'withdrawals.create',
-        'store' => 'withdrawals.store',
-        'update' => 'withdrawals.update',
-        'destroy' => 'withdrawals.destroy',
-    ]);
+    Route::resource('withdrawals', WithdrawalController::class);
 
     // Relatórios
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -93,4 +50,26 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 
     // Logs de Atividades
     Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
+});
+
+Route::get('/super-limpar-cache', function (Request $request) {
+    // Proteção simples por senha (mude 'abc123super' para algo teu forte)
+    
+
+    // Limpeza completa que resolve o problema do provider cached
+    Artisan::call('optimize:clear');     // Principal: limpa compiled services, providers, cache tudo
+    Artisan::call('cache:clear');
+    Artisan::call('config:clear');
+    Artisan::call('route:clear');
+    Artisan::call('view:clear');
+    Artisan::call('event:clear');
+
+    // Apaga manualmente os arquivos de cache para garantir
+    $cachePath = storage_path('framework/cache/data');
+    $bootstrapCache = base_path('bootstrap/cache');
+
+    // Se quiser, delete arquivos (opcional, mas força)
+    // array_map('unlink', glob("$bootstrapCache/*.php")); // Cuidado: só se souber
+
+    return '<h1>Caches limpos com sucesso!</h1><p>Agora acesse o site principal com Ctrl + F5. Se ainda erro, delete bootstrap/cache/ via File Manager.</p>';
 });

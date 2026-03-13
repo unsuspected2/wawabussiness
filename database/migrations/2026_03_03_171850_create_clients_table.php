@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('whatsapp');
-            $table->string('service');
+            $table->foreignId('service_id')->constrained()->onDelete('cascade');
             $table->string('plan');
             $table->decimal('value_paid', 8, 2);
             $table->date('start_date');
@@ -26,6 +26,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        
         Schema::dropIfExists('clients');
     }
 };

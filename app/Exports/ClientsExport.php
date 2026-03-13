@@ -22,19 +22,26 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
 
     public function collection()
     {
-        $query = Client::query()->withTrashed(); // Inclui deletados
+        $query = Client::query()->withTrashed(); // Inclui deletados se necessário
 
+        // Filtro por status
         if ($this->status == 'trashed') {
             $query->onlyTrashed();
         } elseif ($this->status) {
             $query->where('status', $this->status);
         }
 
+        // Filtro por nome do serviço (usando relacionamento)
         if ($this->service) {
-            $query->where('service', 'like', '%' . $this->service . '%');
+            $query->whereHas('service', function ($q) {
+                $q->where('name', 'like', '%' . $this->service . '%');
+            });
         }
 
-        return $query->orderBy('name', 'asc')->get();
+        // Carrega o relacionamento para evitar N+1 no map()
+        return $query->with('service')
+                     ->orderBy('name', 'asc')
+                     ->get();
     }
 
     public function headings(): array
@@ -43,7 +50,7 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
             'ID',
             'Nome Completo',
             'WhatsApp',
-            'Serviço',
+            'Serviço',           // ← continua como "Serviço", mas agora mostra o nome real
             'Plano',
             'Valor Pago (Kz)',
             'Início',
@@ -62,12 +69,15 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
             $client->id,
             $client->name,
             $client->whatsapp,
-            $client->service,
+            
+            // CORREÇÃO AQUI: usa o nome do serviço relacionado
+            $client->service?->name ?? '—',
+            
             $client->plan,
             number_format($client->value_paid, 2, ',', '.'),
             $client->start_date ? date('d/m/Y', strtotime($client->start_date)) : '-',
             $client->due_date ? date('d/m/Y', strtotime($client->due_date)) : '-',
-            $client->status,
+            $client->status . ($client->trashed() ? ' (Removido)' : ''),
             $client->observations ?? '-',
             $client->deleted_reason ?? '-',
             $client->created_at->format('d/m/Y H:i'),

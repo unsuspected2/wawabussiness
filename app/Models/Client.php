@@ -16,6 +16,14 @@ class Client extends Model
         'name', 'whatsapp', 'service_id', 'plan', 'value_paid',
         'start_date', 'due_date', 'status', 'observations', 'deleted_reason',
     ];
+ 
+
+          protected function casts(): array
+    {
+        return [
+            'start_date' => 'date'
+        ];
+    }
 
     public function service()
     {
@@ -27,7 +35,7 @@ class Client extends Model
         return $this->hasMany(Payment::class);
     }
 
-    protected $dates = ['deleted_at'];
+    protected $dates = ['deleted_at', 'start_date'];
 
     // Configuração do Activity Log
     public function getActivitylogOptions(): LogOptions

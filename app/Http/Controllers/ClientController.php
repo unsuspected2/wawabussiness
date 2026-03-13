@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\Service;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -38,7 +39,9 @@ class ClientController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('service', 'like', "%{$search}%");
+                    ->orWhereHas('service', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -54,6 +57,8 @@ class ClientController extends Controller
 
     public function store(Request $request)
     {
+/*         dd($request->all());
+ */
         $validated = $request->validate([
             'existing_client_id' => 'nullable|exists:clients,id',
             'name' => 'required_if:existing_client_id,null|string|max:255',
@@ -106,7 +111,9 @@ class ClientController extends Controller
 
     public function edit(Client $client)
     {
-        return view('admin.clients.edit.index', compact('client'));
+        $services = Service::all();
+
+        return view('admin.clients.edit.index', compact('client', 'services'));
     }
 
     public function update(Request $request, Client $client)

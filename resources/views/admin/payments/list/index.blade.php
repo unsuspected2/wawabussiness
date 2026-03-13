@@ -73,12 +73,12 @@
                             <a href="{{ route('payments.edit', $payment) }}" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <form action="{{ route('payments.destroy', $payment) }}" method="POST" class="d-inline">
+                            {{-- <form action="{{ route('payments.destroy', $payment) }}" method="POST" class="d-inline">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Confirma exclusão?')">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                            </form>
+                            </form> --}}
                         </td>
                     </tr>
                     @endforeach

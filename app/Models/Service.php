@@ -12,6 +12,11 @@ class Service extends Model
 
     protected $fillable = ['name', 'icon', 'default_price', 'description'];
 
+        public function clients()
+    {
+        return $this->hasMany(Client::class);
+    }
+    
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

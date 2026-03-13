@@ -11,34 +11,24 @@
                     @csrf
 
                     <div class="row">
-                        <div class="mb-3" x-data="clientSearch()">
-                            <label class="form-label">Nome do Cliente (buscar existente)</label>
-                            <input type="text" x-model="search" @input.debounce.500ms="searchClients()"
-                                class="form-control bg-secondary text-white border-0"
-                                placeholder="Digite nome ou WhatsApp..." required>
+                        <div class="mb-3" x-show="!selectedId">
+    <label class="form-label">Nome do Cliente <span class="text-danger">*</span></label>
+    <input type="text" 
+           name="name" 
+           x-model="newClientName"
+           class="form-control bg-secondary text-white border-0"
+           placeholder="Nome completo do novo cliente"
+           value="{{ old('name') }}"
+           required
+           x-bind:required="!selectedId">
+    @error('name')
+        <small class="text-danger">{{ $message }}</small>
+    @enderror
+</div>
 
-                            <!-- Resultados -->
-                            <div class="position-relative">
-                                <ul class="list-group position-absolute w-100 mt-1 shadow"
-                                    style="z-index: 1000; max-height: 250px; overflow-y: auto;"
-                                    x-show="results.length > 0 && search.length > 2">
-                                    <template x-for="client in results" :key="client.id">
-                                        <li class="list-group-item list-group-item-action bg-dark text-white cursor-pointer"
-                                            @click="selectClient(client)">
-                                            <span x-text="client.text"></span>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-
-                            <!-- Campo oculto com ID do cliente selecionado -->
-                            <input type="hidden" name="existing_client_id" x-model="selectedId">
-
-                            <small class="text-muted d-block mt-1">
-                                Se o cliente já existe, selecione-o para renovar (evita duplicatas).
-                            </small>
-                        </div>
-
+<small class="text-muted d-block mb-3" x-show="!selectedId">
+    Preencha os dados do novo cliente abaixo.
+</small>
 
 
                         <div class="col-md-6 mb-3">
@@ -114,34 +104,35 @@
         </div>
     </div>
     <script>
-        function clientSearch() {
-            return {
-                search: '',
-                results: [],
-                selectedId: null,
+       function clientSearch() {
+    return {
+        search: '',
+        results: [],
+        selectedId: null,
+        newClientName: '',  // ← adicionado
 
-                async searchClients() {
-                    if (this.search.length < 3) {
-                        this.results = [];
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(`/clients/search-json?term=${encodeURIComponent(this.search)}`);
-                        this.results = await response.json();
-                    } catch (e) {
-                        console.error('Erro na busca:', e);
-                    }
-                },
-
-                selectClient(client) {
-                    this.search = client.text;
-                    this.selectedId = client.id;
-                    this.results = [];
-                    // Opcional: preencher outros campos automaticamente
-                    // document.querySelector('[name="whatsapp"]').value = client.whatsapp || '';
-                }
+        async searchClients() {
+            if (this.search.length < 3) {
+                this.results = [];
+                return;
             }
+            try {
+                const response = await fetch(`/clients/search-json?term=${encodeURIComponent(this.search)}`);
+                this.results = await response.json();
+            } catch (e) {
+                console.error('Erro na busca:', e);
+            }
+        },
+
+        selectClient(client) {
+            this.search = client.text;
+            this.selectedId = client.id;
+            this.newClientName = '';          // limpa nome novo quando seleciona existente
+            // Opcional: preencher whatsapp se desejar
+            // document.querySelector('[name="whatsapp"]').value = client.whatsapp || '';
+            this.results = [];
         }
+    }
+}
     </script>
 @endsection

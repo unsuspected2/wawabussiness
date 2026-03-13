@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client; // Importar DomPDF
+use App\Models\Service; // Importar Excel
 use Barryvdh\DomPDF\Facade\Pdf; // Se for usar Excel
 use Carbon\Carbon; // Classe que criaremos para Excel
 use Illuminate\Http\Request;
@@ -24,10 +25,9 @@ class ReportController extends Controller
             ->get();
 
         // Top Serviços mais vendidos
-        $topServices = Client::select('service', DB::raw('count(*) as count'))
-            ->groupBy('service')
-            ->orderBy('count', 'desc')
-            ->get();
+        $topServices = Service::withCount('clients')  // conta quantos clients tem esse service_id
+            ->orderBy('clients_count', 'desc')
+            ->get(['name', 'clients_count']);
 
         // Clientes perdidos (Cancelados/Deletados no mês atual)
         $churnCount = Client::onlyTrashed()
@@ -46,30 +46,31 @@ class ReportController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
+        
         // Construir query com filtros (inclui soft-deleted)
-        $query = Client::query()->withTrashed();
+        $query = Client::query();
 
-        // Status (incluindo 'trashed')
-        if ($request->status == 'trashed') {
-            $query->onlyTrashed();
-        } elseif ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+    // Status
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
 
-        // Período (created_at ou deleted_at)
-        if ($request->filled('start_date')) {
-            $query->whereDate('created_at', '>=', $request->start_date);
-        }
-        if ($request->filled('end_date')) {
-            $query->whereDate('created_at', '<=', $request->end_date);
-        }
+    // Período (created_at ou outra data relevante)
+    if ($request->filled('start_date')) {
+        $query->whereDate('created_at', '>=', $request->start_date);
+    }
+    if ($request->filled('end_date')) {
+        $query->whereDate('created_at', '<=', $request->end_date);
+    }
 
-        // Serviço
-        if ($request->filled('service')) {
-            $query->where('service', 'like', '%'.$request->service.'%');
-        }
+    // Serviço – CORREÇÃO AQUI
+    if ($request->filled('service')) {
+        $query->whereHas('service', function ($q) use ($request) {
+            $q->where('name', 'like', '%' . $request->service . '%');
+        });
+    }
 
-        $clients = $query->orderBy('name', 'asc')->get();
+    $clients = $query->orderBy('name', 'asc')->get();
 
         if ($clients->isEmpty()) {
             return back()->with('error', 'Nenhum dado encontrado para os filtros selecionados.');

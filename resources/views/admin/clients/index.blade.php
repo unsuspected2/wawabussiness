@@ -58,7 +58,13 @@
                 @forelse($clients as $client)
                 <tr style="{{ $client->trashed() ? 'opacity: 0.6;' : '' }}">
                     <td>{{ $client->name }}</td>
-                    <td><span class="badge bg-primary">{{ $client->service }}</span><br><small class="text-muted">{{ $client->plan }}</small></td>
+                    <td>
+    <span class="badge bg-primary">
+        {{ $client->service?->name ?? '—' }}
+    </span>
+    <br>
+    <small class="text-muted">{{ $client->plan }}</small>
+</td>
                     <td>{{ \Carbon\Carbon::parse($client->due_date)->format('d/m/Y') }}</td>
                     <td class="text-center">
                         @if($client->trashed())
