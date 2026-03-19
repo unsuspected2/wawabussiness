@@ -94,7 +94,8 @@
             <div class="col-lg-6">
                 <div class="card bg-dark text-white shadow border-0">
                     <div class="card-header bg-dark border-secondary">
-                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2 text-primary"></i>Vencimentos (Próx. 7 dias)</h5>
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2 text-primary"></i>Vencimentos (Próx. 7 dias)
+                        </h5>
                     </div>
                     <div class="card-body">
                         <canvas id="dueBarChart" height="250"></canvas>
@@ -102,7 +103,52 @@
                 </div>
             </div>
         </div>
-
+        <!-- NOVA ÁREA: Tarefas e Alertas de Vencimento -->
+        <div class="card bg-dark text-white shadow border-0">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Tarefas e Alertas de Vencimento</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Vencimento</th>
+                                <th>Alerta</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($upcomingExpirations as $client)
+                                @php $daysLeft = Carbon::today()->diffInDays($client->due_date); @endphp
+                                <tr>
+                                    <td class="fw-bold">{{ $client->name }}</td>
+                                    <td>{{ date('d/m/Y', strtotime($client->due_date)) }}</td>
+                                    <td class="{{ $daysLeft <= 3 ? 'text-danger fw-bold' : 'text-warning' }}">
+                                        @if ($daysLeft <= 3)
+                                            <i class="fas fa-exclamation-triangle"></i> {{ $daysLeft }} dias!
+                                        @else
+                                            {{ $daysLeft }} dias
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
+                                            data-bs-target="#taskModal" onclick="setClientId({{ $client->id }})">
+                                            <i class="fas fa-plus"></i> Deixar Tarefa
+                                        </button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">Nenhum vencimento próximo.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
         <!-- Tabela de Exclusões -->
         <div class="card bg-dark text-white shadow border-0">
             <div class="card-header bg-danger text-white">
@@ -123,12 +169,15 @@
                             @forelse($recentDeletions as $log)
                                 <tr>
                                     <td class="ps-4 fw-bold">{{ $log->subject->name ?? 'Removido permanentemente' }}</td>
-                                    <td class="text-warning">{{ $log->subject->deleted_reason ?? 'Motivo não informado' }}</td>
+                                    <td class="text-warning">{{ $log->subject->deleted_reason ?? 'Motivo não informado' }}
+                                    </td>
                                     <td><span class="badge bg-secondary">{{ $log->causer->name ?? 'Sistema' }}</span></td>
                                     <td class="pe-4">{{ $log->created_at->format('d/m/Y H:i') }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center py-4 text-muted">Nenhuma exclusão recente.</td></tr>
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">Nenhuma exclusão recente.</td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -142,7 +191,8 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white border-warning">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title text-warning"><i class="fas fa-money-bill-wave me-2"></i>Registrar Novo Saque</h5>
+                    <h5 class="modal-title text-warning"><i class="fas fa-money-bill-wave me-2"></i>Registrar Novo Saque
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="{{ route('withdrawals.store') }}" method="POST">
@@ -150,20 +200,24 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label text-muted small">Valor do Saque (Kz)</label>
-                            <input type="number" name="amount" step="0.01" class="form-control bg-secondary text-white border-0" placeholder="0,00" required>
+                            <input type="number" name="amount" step="0.01"
+                                class="form-control bg-secondary text-white border-0" placeholder="0,00" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small">Razão do Saque</label>
-                            <input type="text" name="reason" class="form-control bg-secondary text-white border-0" placeholder="Ex: Pagamento de Internet" required>
+                            <input type="text" name="reason" class="form-control bg-secondary text-white border-0"
+                                placeholder="Ex: Pagamento de Internet" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small">Descrição Detalhada (Opcional)</label>
-                            <textarea name="purpose" class="form-control bg-secondary text-white border-0" rows="2" placeholder="Para que serviu este valor?"></textarea>
+                            <textarea name="purpose" class="form-control bg-secondary text-white border-0" rows="2"
+                                placeholder="Para que serviu este valor?"></textarea>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-muted small">Data Prevista Reposição</label>
-                                <input type="date" name="repay_date" class="form-control bg-secondary text-white border-0">
+                                <input type="date" name="repay_date"
+                                    class="form-control bg-secondary text-white border-0">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-muted small">Status de Reposição</label>
@@ -176,7 +230,8 @@
                         </div>
                     </div>
                     <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-warning px-4 fw-bold">Confirmar Saque</button>
                     </div>
                 </form>
@@ -184,9 +239,41 @@
         </div>
     </div>
 
+
+    <!-- Modal de tarefa rápida -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">Adicionar Tarefa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ route('clients.update.task') }}" method="POST">
+                    @csrf @method('PATCH')
+                    <input type="hidden" name="client_id" id="modalClientId">
+                    <div class="modal-body">
+                        <textarea name="observations" class="form-control bg-secondary text-white" rows="4" required
+                            placeholder="Ex: Contactar cliente para renovar..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Salvar Tarefa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
     <!-- Scripts de Gráficos (Mantidos conforme original com pequenos ajustes de cores) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
+        function setClientId(id) {
+            document.getElementById('modalClientId').value = id;
+        }
+
+
         // ... (Seu script de Chart.js permanece o mesmo, ele já está funcional) ...
         // Gráfico de Pizza
         new Chart(document.getElementById('statusPieChart'), {
@@ -194,13 +281,26 @@
             data: {
                 labels: ['Ativos', 'Vencidos', 'Cancelados'],
                 datasets: [{
-                    data: [{{ $statusCount['Ativo'] ?? 0 }}, {{ $statusCount['Vencido'] ?? 0 }}, {{ $statusCount['Cancelado'] ?? 0 }}],
+                    data: [{{ $statusCount['Ativo'] ?? 0 }}, {{ $statusCount['Vencido'] ?? 0 }},
+                        {{ $statusCount['Cancelado'] ?? 0 }}
+                    ],
                     backgroundColor: ['#198754', '#dc3545', '#6c757d'],
                     borderColor: '#212529',
                     borderWidth: 3
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#e0e7ff'} } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#e0e7ff'
+                        }
+                    }
+                }
+            }
         });
 
         // Gráfico de Barras
@@ -215,7 +315,23 @@
                     borderRadius: 5
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#343a40' } }, x: { grid: { display: false } } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#343a40'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
         });
     </script>
 @endsection

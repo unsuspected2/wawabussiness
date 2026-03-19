@@ -39,60 +39,59 @@ class ReportController extends Controller
 
     public function export(Request $request)
     {
-        // Validação básica
         $request->validate([
             'format' => 'required|in:pdf,excel',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        
-        // Construir query com filtros (inclui soft-deleted)
-        $query = Client::query();
+        $query = Client::query()->with(['service']);
 
-    // Status
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
-    }
+        // ── Status ───────────────────────────────────────────────
+        if ($request->filled('status')) {
+            if ($request->status === 'trashed') {
+                $query->onlyTrashed();
+            } else {
+                $query->where('status', $request->status);
+            }
+        }
+        // Quando status NÃO vem ou é vazio → traz TODOS (incluindo trashed? → depende do teu desejo)
+        // Se quiseres EXCLUIR trashed por default em "Todos", adiciona: else { $query->withTrashed(false); }
 
-    // Período (created_at ou outra data relevante)
-    if ($request->filled('start_date')) {
-        $query->whereDate('created_at', '>=', $request->start_date);
-    }
-    if ($request->filled('end_date')) {
-        $query->whereDate('created_at', '<=', $request->end_date);
-    }
-
-    // Serviço – CORREÇÃO AQUI
-    if ($request->filled('service')) {
-        $query->whereHas('service', function ($q) use ($request) {
-            $q->where('name', 'like', '%' . $request->service . '%');
-        });
-    }
-
-    $clients = $query->orderBy('name', 'asc')->get();
-
-        if ($clients->isEmpty()) {
-            return back()->with('error', 'Nenhum dado encontrado para os filtros selecionados.');
+        // ── Período (due_date) ───────────────────────────────────
+        if ($request->filled('start_date')) {
+            $query->whereDate('due_date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('due_date', '<=', $request->end_date);
         }
 
-        // Nome do arquivo dinâmico
+        // ── Serviço ──────────────────────────────────────────────
+        if ($request->filled('service') && trim($request->service) !== '') {
+            $query->whereHas('service', function ($q) use ($request) {
+                $q->where('name', 'like', '%'.trim($request->service).'%');
+            });
+        }
+
+        $clients = $query->orderBy('name', 'asc')->get();
+
+        if ($clients->isEmpty()) {
+            return back()->with('error', 'Nenhum cliente encontrado para os filtros selecionados.');
+        }
+
         $filename = 'Relatorio_WawaBusiness_'.now()->format('d-m-Y_H-i');
 
-        // Gerar Excel
         if ($request->format === 'excel') {
             return Excel::download(
-                new \App\Exports\ClientsExport($request->status, $request->service),
+                new \App\Exports\ClientsExport($clients),  // ← coleção já filtrada
                 $filename.'.xlsx'
             );
         }
 
-        // Gerar PDF (mantém o que já tinha)
-        $pdf = Pdf::loadView('admin.reports.pdf.pdf_template', [
+        // PDF
+        return view('admin.reports.pdf.pdf_template', [
             'clients' => $clients,
             'filters' => $request->all(),
-        ])->setPaper('a4', 'landscape');
-
-        return $pdf->download($filename.'.pdf');
+        ]);
     }
 }

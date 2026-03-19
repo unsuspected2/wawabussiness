@@ -57,8 +57,8 @@ class ClientController extends Controller
 
     public function store(Request $request)
     {
-/*         dd($request->all());
- */
+        /*         dd($request->all());
+         */
         $validated = $request->validate([
             'existing_client_id' => 'nullable|exists:clients,id',
             'name' => 'required_if:existing_client_id,null|string|max:255',
@@ -149,6 +149,15 @@ class ClientController extends Controller
         $client->update($validated);
 
         return redirect()->route('clients.index')->with('success', 'Cliente atualizado!');
+    }
+
+    // Rota para atualizar apenas as observações/tarefas
+    public function updateTask(Request $request)
+    {
+        $client = Client::findOrFail($request->client_id);
+        $client->update(['observations' => $request->observations]);
+
+        return back()->with('success', 'Tarefa guardada com sucesso!');
     }
 
     public function destroy(Client $client)

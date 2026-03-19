@@ -3,15 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
-use Carbon\Carbon;
-use App\Models\Service;
 use App\Models\Payment;
 use App\Models\Withdrawal;
-
-
-
-
-
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -62,20 +56,27 @@ class DashboardController extends Controller
         $monthlyBalance = $monthlyPaid - $monthlyWithdrawals;
 
         // Entradas do mês
-    $monthlyPaid = Payment::whereMonth('payment_date', Carbon::now()->month)
-                          ->sum('amount');
+        $monthlyPaid = Payment::whereMonth('payment_date', Carbon::now()->month)
+            ->sum('amount');
 
-    // Saídas do mês (apenas saques NÃO repostos)
-    $monthlyWithdrawals = Withdrawal::whereMonth('withdrawal_date', Carbon::now()->month)
-                                    ->where('is_repaid', false)
-                                    ->sum('amount');
+        // Saídas do mês (apenas saques NÃO repostos)
+        $monthlyWithdrawals = Withdrawal::whereMonth('withdrawal_date', Carbon::now()->month)
+            ->where('is_repaid', false)
+            ->sum('amount');
 
-    $monthlyBalance = $monthlyPaid - $monthlyWithdrawals;
+        $monthlyBalance = $monthlyPaid - $monthlyWithdrawals;
 
-    // Saques pendentes de reposição (total geral)
-    $pendingRepay = Withdrawal::where('repay_status', 'Pendente')
-                              ->where('is_repaid', false)
-                              ->sum('amount');
+        // Saques pendentes de reposição (total geral)
+        $pendingRepay = Withdrawal::where('repay_status', 'Pendente')
+            ->where('is_repaid', false)
+            ->sum('amount');
+
+        $upcomingExpirations = Client::where('status', '!=', 'Cancelado')
+            ->whereDate('due_date', '>=', Carbon::today())
+            ->whereDate('due_date', '<=', Carbon::today()->addDays(7))
+            ->orderBy('due_date')
+            ->take(15)
+            ->get();
 
         return view('admin.dashboard.index', compact(
             'totalClients',
@@ -89,7 +90,8 @@ class DashboardController extends Controller
             'monthlyPaid',
             'monthlyWithdrawals',
             'monthlyBalance',
-            'pendingRepay'
+            'pendingRepay', 
+            'upcomingExpirations'
         ));
     }
 }

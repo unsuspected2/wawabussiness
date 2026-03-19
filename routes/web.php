@@ -1,17 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ClientController;
-use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\WithdrawalController;
-use App\Http\Controllers\ReportController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LogController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\WithdrawalController;
 use Illuminate\Http\Request;
-
 use Illuminate\Support\Facades\Artisan;
-
+use Illuminate\Support\Facades\Route;
 
 // Rota pública inicial
 Route::get('/', function () {
@@ -50,11 +48,13 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 
     // Logs de Atividades
     Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
+
+    // Rota para atualizar tarefa (exemplo de endpoint específico)
+    Route::patch('/clients/task', [ClientController::class, 'updateTask'])->name('clients.update.task');
 });
 
 Route::get('/super-limpar-cache', function (Request $request) {
     // Proteção simples por senha (mude 'abc123super' para algo teu forte)
-    
 
     // Limpeza completa que resolve o problema do provider cached
     Artisan::call('optimize:clear');     // Principal: limpa compiled services, providers, cache tudo

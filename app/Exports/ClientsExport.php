@@ -1,111 +1,101 @@
 <?php
 
-namespace App\Exports;
+namespace App\Http\Controllers;
 
-use App\Models\Client;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use App\Models\Client; // Importar DomPDF
+use App\Models\Service; // Importar Excel
+// Se for usar Excel
+use Carbon\Carbon; // Classe que criaremos para Excel
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
-class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithStyles
+class ReportController extends Controller
 {
-    protected $status;
-    protected $service;
-
-    public function __construct($status = null, $service = null)
+    public function index()
     {
-        $this->status = $status;
-        $this->service = $service;
+        // Faturamento Mensal (últimos 6 meses)
+        $monthlyRevenue = Client::select(
+            DB::raw('SUM(value_paid) as total'),
+            DB::raw("DATE_FORMAT(created_at, '%m/%Y') as month")
+        )
+            ->groupBy('month')
+            ->orderBy('created_at', 'desc')
+            ->take(6)
+            ->get();
+
+        // Top Serviços mais vendidos
+        $topServices = Service::withCount('clients')  // conta quantos clients tem esse service_id
+            ->orderBy('clients_count', 'desc')
+            ->get(['name', 'clients_count']);
+
+        // Clientes perdidos (Cancelados/Deletados no mês atual)
+        $churnCount = Client::onlyTrashed()
+            ->whereMonth('deleted_at', Carbon::now()->month)
+            ->count();
+
+        return view('admin.reports.index', compact('monthlyRevenue', 'topServices', 'churnCount'));
     }
 
-    public function collection()
+    public function export(Request $request)
     {
-        $query = Client::query()->withTrashed(); // Inclui deletados se necessário
+        $request->validate([
+            'format' => 'required|in:pdf,excel',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
 
-        // Filtro por status
-        if ($this->status == 'trashed') {
-            $query->onlyTrashed();
-        } elseif ($this->status) {
-            $query->where('status', $this->status);
+        // Usa query sem global scopes problemáticos (com withTrashed se necessário)
+        $query = Client::query()->with(['service']);
+
+        // Status
+        if ($request->filled('status') && $request->status !== '') {
+            if ($request->status === 'trashed') {
+                $query->onlyTrashed();
+            } else {
+                $query->where('status', $request->status);
+            }
+        }
+        // Quando vazio ("Todos") → traz tudo (ativos + vencidos + cancelados se quiseres)
+        // Se quiseres excluir removidos por default:
+        // else {
+        //     $query->whereNull('deleted_at');
+        // }
+
+        // Período - due_date
+        if ($request->filled('start_date')) {
+            $query->whereDate('due_date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('due_date', '<=', $request->end_date);
         }
 
-        // Filtro por nome do serviço (usando relacionamento)
-        if ($this->service) {
-            $query->whereHas('service', function ($q) {
-                $q->where('name', 'like', '%' . $this->service . '%');
+        // Serviço
+        if ($request->filled('service') && trim($request->service) !== '') {
+            $serviceName = trim($request->service);
+            $query->whereHas('service', function ($q) use ($serviceName) {
+                $q->where('name', 'like', "%{$serviceName}%");
             });
         }
 
-        // Carrega o relacionamento para evitar N+1 no map()
-        return $query->with('service')
-                     ->orderBy('name', 'asc')
-                     ->get();
-    }
+        $clients = $query->orderBy('name', 'asc')->get();
 
-    public function headings(): array
-    {
-        return [
-            'ID',
-            'Nome Completo',
-            'WhatsApp',
-            'Serviço',           // ← continua como "Serviço", mas agora mostra o nome real
-            'Plano',
-            'Valor Pago (Kz)',
-            'Início',
-            'Vencimento',
-            'Status',
-            'Observações',
-            'Motivo Exclusão',
-            'Criado em',
-            'Atualizado em',
-        ];
-    }
-
-    public function map($client): array
-    {
-        return [
-            $client->id,
-            $client->name,
-            $client->whatsapp,
-            
-            // CORREÇÃO AQUI: usa o nome do serviço relacionado
-            $client->service?->name ?? '—',
-            
-            $client->plan,
-            number_format($client->value_paid, 2, ',', '.'),
-            $client->start_date ? date('d/m/Y', strtotime($client->start_date)) : '-',
-            $client->due_date ? date('d/m/Y', strtotime($client->due_date)) : '-',
-            $client->status . ($client->trashed() ? ' (Removido)' : ''),
-            $client->observations ?? '-',
-            $client->deleted_reason ?? '-',
-            $client->created_at->format('d/m/Y H:i'),
-            $client->updated_at->format('d/m/Y H:i'),
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        $sheet->getStyle('A1:M1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12, 'color' => ['argb' => 'FFFFFFFF']],
-            'fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FF198754']], // Verde
-        ]);
-
-        $sheet->getStyle('A2:M' . $sheet->getHighestRow())->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                    'color' => ['argb' => 'FF6C757D'],
-                ],
-            ],
-        ]);
-
-        // Largura automática das colunas
-        foreach (range('A', 'M') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        if ($clients->isEmpty()) {
+            return back()->with('error', 'Nenhum cliente encontrado para os filtros selecionados.');
         }
 
-        return [];
+        $filename = 'Relatorio_WawaBusiness_'.now()->format('d-m-Y_H-i');
+
+        if ($request->format === 'excel') {
+            return Excel::download(
+                new \App\Exports\ClientsExport($clients),
+                $filename.'.xlsx'
+            );
+        }
+
+        return view('admin.reports.pdf.pdf_template', [
+            'clients' => $clients,
+            'filters' => $request->all(),
+        ]);
     }
 }

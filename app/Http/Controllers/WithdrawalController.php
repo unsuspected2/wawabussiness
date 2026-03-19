@@ -86,6 +86,11 @@ class WithdrawalController extends Controller
         return redirect()->route('withdrawals.index')
             ->with('success', 'Saque registrado com sucesso!');
     }
+       public function show(Withdrawal $withdrawal)
+    {
+        return view('admin.withdrawals.show.index', compact('withdrawal'));
+    }
+
 
     public function update(Request $request, Withdrawal $withdrawal)
     {

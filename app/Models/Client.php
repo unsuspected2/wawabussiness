@@ -16,12 +16,13 @@ class Client extends Model
         'name', 'whatsapp', 'service_id', 'plan', 'value_paid',
         'start_date', 'due_date', 'status', 'observations', 'deleted_reason',
     ];
- 
 
-          protected function casts(): array
+    protected function casts(): array
     {
         return [
-            'start_date' => 'date'
+            'start_date' => 'date',
+            'due_date' => 'date',
+            
         ];
     }
 
@@ -54,6 +55,8 @@ class Client extends Model
             $this->status = 'Vencido';
         }
     }
+
+  
 
     public static function boot()
     {
