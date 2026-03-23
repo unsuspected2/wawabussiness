@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="pt">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -175,7 +176,7 @@
                 <li class="{{ request()->routeIs('clients.*') ? 'active' : '' }}">
                     <a href="{{ route('clients.index') }}">
                         <i class="fas fa-users"></i> Clientes
-                        @if($vencidosCount ?? 0 > 0)
+                        @if ($vencidosCount ?? 0 > 0)
                             <span class="badge-vencidos">{{ $vencidosCount }}</span>
                         @endif
                     </a>
@@ -190,6 +191,13 @@
                 <li class="{{ request()->routeIs('payments.index') ? 'active' : '' }}">
                     <a href="{{ route('payments.index') }}">
                         <i class="fas fa-hand-holding-dollar"></i> Renovações
+                    </a>
+                </li>
+
+                <!-- Nova seção: Perfis Alocados -->
+                <li class="{{ request()->routeIs('perfis-alocados.') ? 'active' : '' }}">
+                    <a href="{{ route('perfis-alocados.index') }}">
+                        <i class="fas fa-user-lock"></i> Perfis Alocados
                     </a>
                 </li>
 
@@ -249,11 +257,12 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        $(document).ready(function () {
-            $('#sidebarCollapse').on('click', function () {
+        $(document).ready(function() {
+            $('#sidebarCollapse').on('click', function() {
                 $('#sidebar').toggleClass('active');
             });
         });
     </script>
 </body>
+
 </html>

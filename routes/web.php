@@ -4,6 +4,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PerfilAlocadoController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\WithdrawalController;
@@ -51,8 +52,43 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 
     // Rota para atualizar tarefa (exemplo de endpoint específico)
     Route::patch('/clients/task', [ClientController::class, 'updateTask'])->name('clients.update.task');
-});
 
+    // Rotas para Perfis Alocados (Web)
+    Route::resource('perfis-alocados', PerfilAlocadoController::class)->parameters([
+        'perfis-alocados' => 'perfilAlocado',  // força o parâmetro a ser {perfilAlocado}
+    ]);    // Rotas para Perfis Alocados (API)
+    Route::get('/clientes/{clienteId}/perfis', [PerfilAlocadoController::class, 'index']);
+    Route::post('/perfis', [PerfilAlocadoController::class, 'store']);
+
+    // Rota AJAX para buscar pagamentos por cliente (usada no form de perfis alocados)
+    // routes/web.php
+    Route::get('/pagamentos/by-client', function (Illuminate\Http\Request $request) {
+        $clientId = $request->query('client_id');
+
+        if (! $clientId) {
+            return response()->json([]);
+        }
+
+        try {
+            $pagamentos = App\Models\Payment::where('client_id', $clientId)
+                ->orderByDesc('payment_date')
+                ->get(['id', 'amount', 'new_due_date']);
+
+            return response()->json($pagamentos->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'amount' => $p->amount ?? 0,
+                    'new_due_date' => $p->new_due_date ? $p->new_due_date->format('d/m/Y') : null,
+                    // Sem status → removido completamente
+                ];
+            }));
+        } catch (\Exception $e) {
+            \Log::error('Erro na rota pagamentos/by-client: '.$e->getMessage());
+
+            return response()->json(['error' => 'Erro interno ao carregar pagamentos'], 500);
+        }
+    })->name('pagamentos.by-client');
+});
 Route::get('/super-limpar-cache', function (Request $request) {
     // Proteção simples por senha (mude 'abc123super' para algo teu forte)
 
