@@ -8,6 +8,7 @@ use App\Http\Controllers\PerfilAlocadoController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\CashClosureController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -56,9 +57,15 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     // Rotas para Perfis Alocados (Web)
     Route::resource('perfis-alocados', PerfilAlocadoController::class)->parameters([
         'perfis-alocados' => 'perfilAlocado',  // força o parâmetro a ser {perfilAlocado}
-    ]);    // Rotas para Perfis Alocados (API)
+    ]);    
+    
+    // Rotas para Perfis Alocados (API)
     Route::get('/clientes/{clienteId}/perfis', [PerfilAlocadoController::class, 'index']);
     Route::post('/perfis', [PerfilAlocadoController::class, 'store']);
+
+    // Rotas para Fechamento de Caixa Mensal
+    Route::get('/cash-closure', [CashClosureController::class, 'index'])->name('cash-closure.index');
+    Route::post('/cash-closure/close/{yearMonth}', [CashClosureController::class, 'close'])->name('cash-closure.close');
 
     // Rota AJAX para buscar pagamentos por cliente (usada no form de perfis alocados)
     // routes/web.php

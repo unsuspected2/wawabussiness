@@ -5,14 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Payment;
 use App\Models\PerfilAlocado;
-use App\Models\Service; // Nota: usamos Payment (não Pagamento)
+use App\Models\Service;
+use App\Traits\ChecksCashClosure; // Nota: usamos Payment (não Pagamento)
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class PerfilAlocadoController extends Controller
 {
+    use ChecksCashClosure;
 
-public function index()
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
     {
         $perfisAlocados = PerfilAlocado::with(['cliente', 'pagamento', 'servico'])
             ->latest()
@@ -21,31 +31,36 @@ public function index()
         return view('admin.perfis-alocados.list.index', compact('perfisAlocados'));
     }
 
-    
-public function create()
-{
-    $clientes = Client::orderBy('name')->get(['id', 'name']);
-    $servicos = Service::orderBy('name')->get(['id', 'name']);
-    $perfilAlocado = new \App\Models\PerfilAlocado(); // objeto vazio
+    public function create()
+    {
+        $clientes = Client::orderBy('name')->get(['id', 'name']);
+        $servicos = Service::orderBy('name')->get(['id', 'name']);
+        $perfilAlocado = new \App\Models\PerfilAlocado; // objeto vazio
 
-    return view('admin.perfis-alocados.create.index', compact('clientes', 'servicos', 'perfilAlocado'));
-}
+        return view('admin.perfis-alocados.create.index', compact('clientes', 'servicos', 'perfilAlocado'));
+    }
 
-public function edit(PerfilAlocado $perfilAlocado)
-{
-    // Clientes: só id e name, como pluck para select
-    $clientes = Client::orderBy('name')->pluck('name', 'id');
+    public function edit(PerfilAlocado $perfilAlocado)
+    {
+        if ($perfilAlocado->pagamento && $this->monthIsClosed($perfilAlocado->pagamento->payment_date)) {
+            return redirect()->route('perfis-alocados.index')
+                ->with('error', $this->closedMonthMessage());
+        }
 
-    // Serviços: igual
-    $servicos = Service::orderBy('name')->pluck('name', 'id');
+        // Clientes: só id e name, como pluck para select
+        $clientes = Client::orderBy('name')->pluck('name', 'id');
 
-    // Pagamentos: só colunas necessárias, ordenação por data de pagamento recente
-    $pagamentos = Payment::where('client_id', $perfilAlocado->client_id)
-        ->orderByDesc('new_due_date')
-        ->get(['id','amount', 'new_due_date']);  // remove o resto
+        // Serviços: igual
+        $servicos = Service::orderBy('name')->pluck('name', 'id');
 
-    return view('admin.perfis-alocados.edit.index', compact('perfilAlocado', 'clientes', 'servicos', 'pagamentos'));
-}
+        // Pagamentos: só colunas necessárias, ordenação por data de pagamento recente
+        $pagamentos = Payment::where('client_id', $perfilAlocado->client_id)
+            ->orderByDesc('new_due_date')
+            ->get(['id', 'amount', 'new_due_date']);  // remove o resto
+
+        return view('admin.perfis-alocados.edit.index', compact('perfilAlocado', 'clientes', 'servicos', 'pagamentos'));
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -125,6 +140,10 @@ public function edit(PerfilAlocado $perfilAlocado)
      */
     public function destroy(PerfilAlocado $perfilAlocado)
     {
+        if ($perfilAlocado->pagamento && $this->monthIsClosed($perfilAlocado->pagamento->payment_date)) {
+            return redirect()->route('perfis-alocados.index')
+                ->with('error', $this->closedMonthMessage());
+        }
         try {
             $perfilAlocado->delete();
 

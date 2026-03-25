@@ -213,6 +213,12 @@
                     </a>
                 </li>
 
+                <li class="{{ request()->routeIs('cash-closure.*') ? 'active' : '' }}">
+                    <a href="{{ route('cash-closure.index') }}">
+                        <i class="fas fa-cash-register"></i> Fechamento de Caixa Mensal
+                    </a>
+                </li>
+
                 <li class="{{ request()->routeIs('logs.index') ? 'active' : '' }}">
                     <a href="{{ route('logs.index') }}">
                         <i class="fas fa-history"></i> Logs de Atividades

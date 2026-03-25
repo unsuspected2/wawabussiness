@@ -10,11 +10,11 @@
             </button>
         </div>
         <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="text-success fw-bold mb-0">Relatórios</h2>
-    <a href="{{ route('reports.export') }}" class="btn btn-outline-success">
-        <i class="fas fa-file-excel me-2"></i> Exportar Tudo (Excel)
-    </a>
-</div>
+            <h2 class="text-success fw-bold mb-0">Relatórios</h2>
+            <a href="{{ route('reports.export') }}" class="btn btn-outline-success">
+                <i class="fas fa-file-excel me-2"></i> Exportar Tudo (Excel)
+            </a>
+        </div>
 
         <!-- Modal de Exportação -->
         <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
@@ -104,7 +104,7 @@
                 <div class="card bg-dark border-secondary text-white">
                     <div class="card-header border-secondary">Faturamento Mensal (Kz)</div>
                     <div class="card-body">
-                        <canvas id="revenueChart" height="100"></canvas>
+                        <canvas id="revenueChart" height="260"></canvas>
                     </div>
                 </div>
             </div>
@@ -118,8 +118,8 @@
                             @foreach ($topServices as $service)
                                 <div class="col-md-3 mb-3 text-center">
                                     <div class="p-3 border border-secondary rounded">
-                                        <h5 class="text-success">{{ $service->service }}</h5>
-                                        <p class="mb-0">{{ $service->count }} Assinantes</p>
+                                        <h5 class="text-success">{{ $service->name }}</h5>
+                                        <p class="mb-0">{{ $service->count() }} Assinantes</p>
                                     </div>
                                 </div>
                             @endforeach
@@ -130,40 +130,112 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
         const ctx = document.getElementById('revenueChart');
+
+        // Gradiente neon forte (igual aos dashboards modernos)
+        const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(34, 197, 94, 0.65)'); // verde neon forte
+        gradient.addColorStop(0.4, 'rgba(34, 197, 94, 0.25)');
+        gradient.addColorStop(1, 'rgba(34, 197, 94, 0.02)');
+
+        // Efeito glow extra (truque profissional)
+        const glowDataset = {
+            label: 'Glow',
+            data: @json($monthlyRevenue->pluck('total')->reverse()),
+            borderColor: 'rgba(34, 197, 94, 0.4)',
+            borderWidth: 12,
+            tension: 0.45,
+            pointRadius: 0,
+            fill: false
+        };
+
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: @json($monthlyRevenue->pluck('month')->reverse()),
-                datasets: [{
-                    label: 'Receita Total',
-                    data: @json($monthlyRevenue->pluck('total')->reverse()),
-                    borderColor: '#198754',
-                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
+                datasets: [
+                    glowDataset, // camada de glow primeiro
+                    {
+                        label: 'Faturamento Mensal',
+                        data: @json($monthlyRevenue->pluck('total')->reverse()),
+                        borderColor: '#22c55e',
+                        borderWidth: 5,
+                        backgroundColor: gradient,
+                        pointBackgroundColor: '#0f172a',
+                        pointBorderColor: '#22c55e',
+                        pointRadius: 7,
+                        pointHoverRadius: 11,
+                        pointBorderWidth: 4,
+                        tension: 0.45,
+                        fill: true
+                    }
+                ]
             },
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        borderColor: '#22c55e',
+                        borderWidth: 2,
+                        titleColor: '#94a3b8',
+                        bodyColor: '#22c55e',
+                        bodyFont: {
+                            size: 18,
+                            weight: 'bold'
+                        },
+                        padding: 16,
+                        displayColors: false,
+                        callbacks: {
+                            label: (ctx) => ctx.raw.toLocaleString('pt-AO') + ' Kz',
+                            title: (ctx) => 'Mês: ' + ctx[0].label
+                        }
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
                         grid: {
-                            color: '#333'
+                            color: '#334155',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: {
+                                size: 14
+                            },
+                            callback: (value) => value.toLocaleString('pt-AO') + ' Kz',
+                            stepSize: 2000
                         }
                     },
                     x: {
                         grid: {
-                            color: '#333'
+                            color: '#334155',
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: {
+                                size: 14
+                            },
+                            maxRotation: 0
                         }
                     }
                 },
-                plugins: {
-                    legend: {
-                        display: false
+                elements: {
+                    line: {
+                        borderJoinStyle: 'round'
                     }
+                },
+                animation: {
+                    duration: 2200,
+                    easing: 'easeOutExpo'
                 }
             }
         });

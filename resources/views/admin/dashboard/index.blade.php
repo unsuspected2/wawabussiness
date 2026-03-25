@@ -28,14 +28,24 @@
                         <h2 class="fw-bold {{ $monthlyBalance >= 0 ? 'text-success' : 'text-danger' }} mb-1">
                             {{ number_format($monthlyBalance, 2, ',', '.') }} Kz
                         </h2>
-                        <div class="d-flex justify-content-between mt-2 pt-2 border-top border-secondary">
-                            <small class="text-success">Entradas: {{ number_format($monthlyPaid, 2, ',', '.') }}</small>
-                            <small class="text-danger">Saídas: {{ number_format($monthlyWithdrawals, 2, ',', '.') }}</small>
+                        <div class="d-flex justify-content-between mt-3 pt-3 border-top border-secondary small">
+                            <div>
+                                <span class="text-success">Entradas:</span><br>
+                                <strong>{{ number_format($monthlyInflows, 2, ',', '.') }} Kz</strong>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-danger">Saídas:</span><br>
+                                <strong>{{ number_format($monthlyOutflows, 2, ',', '.') }} Kz</strong>
+                            </div>
                         </div>
+                        @if ($lastClosure)
+                            <div class="mt-3 pt-3 border-top border-secondary small text-muted">
+                                Saldo inicial: {{ number_format($startingBalance, 2, ',', '.') }} Kz
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
-
             <!-- Outros Cards menores -->
             <div class="col-xl-2 col-md-4">
                 <div class="card bg-dark text-white shadow h-100">
@@ -71,7 +81,8 @@
                 <div class="card bg-dark text-white shadow h-100">
                     <div class="card-body">
                         <h6 class="text-muted small">Total Histórico</h6>
-                        <h3 class="fw-bold mb-0" style="font-size: 1.2rem">{{ number_format($totalPaid, 0, ',', '.') }}</h3>
+                        <h3 class="fw-bold mb-0" style="font-size: 1.2rem">{{ number_format($totalPaid, 0, ',', '.') }}
+                        </h3>
                         <small class="text-muted">Desde o início</small>
                     </div>
                 </div>
@@ -121,8 +132,7 @@
                         </thead>
                         <tbody>
                             @forelse($upcomingExpirations as $client)
-                                @php $daysLeft = Carbon::today()->diffInDays($client->due_date); @endphp
-                                <tr>
+                                @php $daysLeft = \Carbon\Carbon::today()->diffInDays($client->due_date); @endphp <tr>
                                     <td class="fw-bold">{{ $client->name }}</td>
                                     <td>{{ date('d/m/Y', strtotime($client->due_date)) }}</td>
                                     <td class="{{ $daysLeft <= 3 ? 'text-danger fw-bold' : 'text-warning' }}">
